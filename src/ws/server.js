@@ -1,4 +1,4 @@
-import { WebSocket } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 
 function sendJson(socket, payload) {
     if(socket.readyState !== WebSocket.OPEN) return;
@@ -8,7 +8,7 @@ function sendJson(socket, payload) {
 
 function broadcast(wss, payload) {
     for (const client of wss.clients) {
-        if(socket.readyState !== WebSocket.OPEN) return;
+        if(socket.readyState !== WebSocket.OPEN) continue;
 
         client.send(JSON.stringify(payload));
     }
