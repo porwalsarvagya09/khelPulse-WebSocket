@@ -4,7 +4,10 @@ import { matchRouter } from './routes/matches.js';
 import { attachWebSocketServer } from './ws/server.js';
 
 
-const PORT = Number(process.env.PORT || 8000);
+const PORT = Number.parseInt(process.env.PORT ?? '8000', 10);
+   if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
+        throw new Error(`Invalid PORT: ${process.env.PORT}`);
+    }
 const HOST = process.env.HOST || '0.0.0.0';
 
 const app = express();
