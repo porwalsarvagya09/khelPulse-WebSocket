@@ -4,13 +4,15 @@ import { matches } from "../db/schema.js";
 import { db } from "../db/db.js";
 import { getMatchStatus } from "../utils/match-status.js";
 import { desc } from "drizzle-orm";
-import { string } from "zod";
+import { createMatchLimiter } from "../middleware/rateLimiter.js";
+
+import { authMiddleware } from "../middleware/auth.js";
 
 export const matchRouter = Router();
 
 const MAX_LIMIT = 100;
 
-matchRouter.get('/', async(req, res) => {
+matchRouter.get('/', async(req, res, next) => {
     const parsed = listMatchesQuerySchema.safeParse(req.query);
 
     if(!parsed.success) {
@@ -23,11 +25,11 @@ matchRouter.get('/', async(req, res) => {
         const data = await db.select().from(matches).orderBy((desc(matches.createdAt))).limit(limit);
         res.json({ data });
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch matches.' });
+        next(error);
     }
 })
 
-matchRouter.post('/', async(req, res) => {
+matchRouter.post('/', authMiddleware, createMatchLimiter, async(req, res, next) => {
     const parsed = createMatchSchema.safeParse(req.body);
     
     if(!parsed.success) {
@@ -56,6 +58,6 @@ matchRouter.post('/', async(req, res) => {
 
         res.status(201).json({ data: event });
     } catch (e) {
-        res.status(500).json({ error: 'Failed to create match.', details: JSON.stringify(e) });
+        next(e);
     }
 })
