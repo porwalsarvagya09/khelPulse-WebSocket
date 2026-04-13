@@ -10,11 +10,16 @@ const ADMIN = {
   username: "admin",
   password: "admin123",
 };
-
-authRouter.post("/login", (req, res) => {
-  const { username, password } = req.body;
-
  
+authRouter.post("/login", (req, res) => {
+  
+  const { username, password } = req.body ?? {};
+
+  if (typeof username !== "string" || typeof password !== "string") {
+    return res.status(400).json({ error: "Invalid login payload" });
+  }
+
+  
   if (username !== ADMIN.username || password !== ADMIN.password) {
     return res.status(401).json({ error: "Invalid credentials" });
   }

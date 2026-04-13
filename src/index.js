@@ -1,9 +1,10 @@
 import express from 'express'
+import 'dotenv/config';
 import http from 'http';
 import { matchRouter } from './routes/matches.js';
 import { attachWebSocketServer } from './ws/server.js';
 import { logger } from "./middleware/logger.js";
-import 'dotenv/config';
+
 
 import helmet from 'helmet';
 import cors from 'cors';
