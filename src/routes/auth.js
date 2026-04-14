@@ -8,6 +8,10 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
 
+if (!JWT_SECRET || !ADMIN_USERNAME || !ADMIN_PASSWORD_HASH) {
+  throw new Error("Missing required auth environment variables: JWT_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD_HASH");
+}
+
 authRouter.post("/login", async (req, res) => {
   const { username, password } = req.body;
 

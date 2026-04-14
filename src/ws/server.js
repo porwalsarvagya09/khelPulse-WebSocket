@@ -10,7 +10,7 @@ function sendJson(socket, payload) {
 
 function broadcast(wss, payload) {
   for (const client of wss.clients) {
-    if (client.readyState !== WebSocket.OPEN) continue;
+    if (client.readyState !== WebSocket.OPEN || !client.isAuthenticated) continue;
     client.send(JSON.stringify(payload));
   }
 }
@@ -25,7 +25,13 @@ export function attachWebSocketServer(server) {
   wss.on("connection", (socket) => {
     console.log("WS Client connected");
 
-    let isAuthenticated = false;
+    socket.isAuthenticated = false;
+
+    const authTimer = setTimeout(() => {
+      if (!socket.isAuthenticated && socket.readyState === WebSocket.OPEN) {
+        socket.close(1008, "Authentication timeout");
+      }
+    }, 5000);
 
     socket.on("message", (msg) => {
       try {
@@ -41,7 +47,8 @@ export function attachWebSocketServer(server) {
             const decoded = jwt.verify(data.token, JWT_SECRET);
 
             socket.user = decoded;
-            isAuthenticated = true;
+            socket.isAuthenticated = true;
+            clearTimeout(authTimer);
 
             console.log("WS Authenticated:", decoded.username);
 
@@ -54,7 +61,7 @@ export function attachWebSocketServer(server) {
           return;
         }
 
-        if (!isAuthenticated) {
+        if (!socket.isAuthenticated) {
           socket.close(1008, "Unauthorized");
           return;
         }
@@ -68,6 +75,7 @@ export function attachWebSocketServer(server) {
     });
 
     socket.on("close", (code, reason) => {
+      clearTimeout(authTimer);
       console.log("Client disconnected", code, reason?.toString());
     });
 
