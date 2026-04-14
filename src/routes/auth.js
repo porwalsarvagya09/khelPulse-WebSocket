@@ -1,32 +1,29 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
 export const authRouter = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
 
+authRouter.post("/login", async (req, res) => {
+  const { username, password } = req.body;
 
-const ADMIN = {
-  username: "admin",
-  password: "admin123",
-};
- 
-authRouter.post("/login", (req, res) => {
-  
-  const { username, password } = req.body ?? {};
-
-  if (typeof username !== "string" || typeof password !== "string") {
-    return res.status(400).json({ error: "Invalid login payload" });
+  if (username !== ADMIN_USERNAME) {
+    return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  
-  if (username !== ADMIN.username || password !== ADMIN.password) {
+  const isMatch = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
+
+  if (!isMatch) {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
   
   const token = jwt.sign(
-    { username: ADMIN.username, role: "admin" },
+    { username: ADMIN_USERNAME, role: "admin" },
     JWT_SECRET,
     { expiresIn: "1h" }
   );

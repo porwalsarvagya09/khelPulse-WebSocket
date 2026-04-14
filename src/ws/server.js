@@ -5,14 +5,12 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 function sendJson(socket, payload) {
   if (socket.readyState !== WebSocket.OPEN) return;
-
   socket.send(JSON.stringify(payload));
 }
 
 function broadcast(wss, payload) {
   for (const client of wss.clients) {
     if (client.readyState !== WebSocket.OPEN) continue;
-
     client.send(JSON.stringify(payload));
   }
 }
@@ -33,23 +31,26 @@ export function attachWebSocketServer(server) {
       try {
         const data = JSON.parse(msg.toString());
 
-        
         if (data.type === "auth") {
-          const token = data.token;
-
-          if (!token) {
+          if (!data.token) {
             socket.close(1008, "No token provided");
             return;
           }
 
-          const decoded = jwt.verify(token, JWT_SECRET);
+          try {
+            const decoded = jwt.verify(data.token, JWT_SECRET);
 
-          socket.user = decoded;
-          isAuthenticated = true;
+            socket.user = decoded;
+            isAuthenticated = true;
 
-          console.log("WS Authenticated:", decoded.username);
+            console.log("WS Authenticated:", decoded.username);
 
-          sendJson(socket, { type: "welcome" });
+            sendJson(socket, { type: "welcome" });
+          } catch (err) {
+            console.error("Invalid token:", err.message);
+            socket.close(1008, "Invalid token");
+          }
+
           return;
         }
 
@@ -58,11 +59,11 @@ export function attachWebSocketServer(server) {
           return;
         }
 
-        
         console.log("Received:", data);
+
       } catch (err) {
         console.error("WS Error:", err.message);
-        socket.close(1008, "Invalid message");
+        socket.close(1008, "Invalid message format");
       }
     });
 
@@ -71,7 +72,7 @@ export function attachWebSocketServer(server) {
     });
 
     socket.on("error", (err) => {
-      console.error("WS Error:", err);
+      console.error("Socket error:", err);
     });
   });
 

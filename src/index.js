@@ -1,5 +1,5 @@
-import express from 'express'
 import 'dotenv/config';
+import express from 'express'
 import http from 'http';
 import { matchRouter } from './routes/matches.js';
 import { attachWebSocketServer } from './ws/server.js';
