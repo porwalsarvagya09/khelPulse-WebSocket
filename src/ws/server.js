@@ -78,6 +78,14 @@ export function attachWebSocketServer(server) {
     socket.isAuthenticated = false;
     socket.subscriptions = new Set();
 
+    // Set authentication timeout (10 seconds)
+    socket.authTimeout = setTimeout(() => {
+      if (!socket.isAuthenticated) {
+        console.log("WS authentication timeout");
+        socket.close(1008, "Authentication timeout");
+      }
+    }, 10000);
+
     socket.on("message", (msg) => {
       try {
         const data = JSON.parse(msg.toString());
@@ -92,6 +100,12 @@ export function attachWebSocketServer(server) {
             const decoded = jwt.verify(data.token, JWT_SECRET);
             socket.user = decoded;
             socket.isAuthenticated = true;
+
+            // Clear authentication timeout on successful auth
+            if (socket.authTimeout) {
+              clearTimeout(socket.authTimeout);
+              socket.authTimeout = null;
+            }
 
             console.log("WS authenticated:", decoded.username);
 
@@ -113,7 +127,7 @@ export function attachWebSocketServer(server) {
         if (data.type === "subscribe") {
           const matchId = Number(data.matchId);
 
-          if (!Number.isInteger(matchId)) {
+          if (!Number.isInteger(matchId) || matchId <= 0) {
             return sendJson(socket, { type: "error", message: "Invalid matchId" });
           }
 
@@ -127,6 +141,10 @@ export function attachWebSocketServer(server) {
         //UNSUBSCRIBE
         if (data.type === "unsubscribe") {
           const matchId = Number(data.matchId);
+
+          if (!Number.isInteger(matchId) || matchId <= 0) {
+            return sendJson(socket, { type: "error", message: "Invalid matchId" });
+          }
 
           unsubscribe(matchId, socket);
           socket.subscriptions.delete(matchId);
@@ -146,11 +164,21 @@ export function attachWebSocketServer(server) {
 
     socket.on("close", () => {
       console.log("WS client disconnected");
+      // Clear authentication timeout on close to avoid leaks
+      if (socket.authTimeout) {
+        clearTimeout(socket.authTimeout);
+        socket.authTimeout = null;
+      }
       cleanup(socket);
     });
 
     socket.on("error", (err) => {
       console.error("WS socket error:", err);
+      // Clear authentication timeout on error to avoid leaks
+      if (socket.authTimeout) {
+        clearTimeout(socket.authTimeout);
+        socket.authTimeout = null;
+      }
     });
   });
 

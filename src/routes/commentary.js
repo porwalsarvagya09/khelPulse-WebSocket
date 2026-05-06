@@ -4,6 +4,7 @@ import { matchIdParamSchema } from "../validation/matches.js";
 import { createCommentarySchema, listCommentaryQuerySchema } from "../validation/commentary.js";
 import { db } from "../db/db.js";
 import { commentary } from "../db/schema.js";
+import { authMiddleware } from "../middleware/auth.js";
 
 const MAX_LIMIT = 100;
 
@@ -43,7 +44,12 @@ commentaryRouter.get('/:id/commentary', async (req, res, next) => {
 
 
 
-commentaryRouter.post('/:id/commentary', async (req, res, next) => {
+commentaryRouter.post('/:id/commentary', authMiddleware, async (req, res, next) => {
+    // Authorization check: only admin role can post commentary
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Insufficient permissions to post commentary.' });
+    }
+
     const paramsResult = matchIdParamSchema.safeParse(req.params);
 
     if (!paramsResult.success) {
