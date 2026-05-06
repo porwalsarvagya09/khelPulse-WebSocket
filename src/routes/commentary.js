@@ -1,0 +1,80 @@
+import { Router } from "express";
+import { eq, desc } from "drizzle-orm";
+import { matchIdParamSchema } from "../validation/matches.js";
+import { createCommentarySchema, listCommentaryQuerySchema } from "../validation/commentary.js";
+import { db } from "../db/db.js";
+import { commentary } from "../db/schema.js";
+import { authMiddleware } from "../middleware/auth.js";
+
+const MAX_LIMIT = 100;
+
+export const commentaryRouter = Router();
+
+
+commentaryRouter.get('/:id/commentary', async (req, res, next) => {
+    const paramsResult = matchIdParamSchema.safeParse(req.params);
+
+    if (!paramsResult.success) {
+        return res.status(400).json({ error: 'Invalid match ID.', details: paramsResult.error.issues });
+    }
+
+    const queryResult = listCommentaryQuerySchema.safeParse(req.query);
+    if (!queryResult.success) {
+        return res.status(400).json({ error: 'Invalid query parameters.', details: queryResult.error.issues });
+    }
+
+    try {
+        const { id: matchId } = paramsResult.data;
+        const limit = queryResult.data.limit ?? 100;
+        const safeLimit = Math.min(limit, MAX_LIMIT);
+
+        const results = await db
+            .select()
+            .from(commentary)
+            .where(eq(commentary.matchId, matchId))
+            .orderBy(desc(commentary.createdAt))
+            .limit(safeLimit);
+
+        res.status(200).json({ data: results });
+
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+
+commentaryRouter.post('/:id/commentary', authMiddleware, async (req, res, next) => {
+    // Authorization check: only admin role can post commentary
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Insufficient permissions to post commentary.' });
+    }
+
+    const paramsResult = matchIdParamSchema.safeParse(req.params);
+
+    if (!paramsResult.success) {
+        return res.status(400).json({ error: 'Invalid match ID.', details: paramsResult.error.issues });
+    }
+
+    const bodyResult = createCommentarySchema.safeParse(req.body);
+
+    if (!bodyResult.success) {
+        return res.status(400).json({ error: 'Invalid commentary payload.', details: bodyResult.error.issues });
+    }
+
+    try {
+        const [result] = await db.insert(commentary).values({
+            matchId: paramsResult.data.id,
+            ...bodyResult.data
+        }).returning();
+
+        if (req.app.locals.broadcastCommentary) {
+            req.app.locals.broadcastCommentary(result.matchId, result);
+        }
+
+        res.status(201).json({ data: result });
+
+    } catch (error) {
+        next(error);
+    }
+});
