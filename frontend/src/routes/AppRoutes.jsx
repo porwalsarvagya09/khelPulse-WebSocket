@@ -9,6 +9,8 @@ import AdminLoginPage from "../pages/AdminLoginPage";
 import AdminDashboardPage from "../pages/AdminDashboardPage";
 import NotFoundPage from "../pages/NotFoundPage";
 
+import ProtectedRoute from "./ProtectedRoute";
+
 function AppRoutes() {
   return (
     <Routes>
@@ -21,7 +23,14 @@ function AppRoutes() {
       {/* Admin Routes */}
       <Route element={<AdminLayout />}>
         <Route path="/admin/login" element={<AdminLoginPage />} />
-        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute>
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       {/* 404 */}

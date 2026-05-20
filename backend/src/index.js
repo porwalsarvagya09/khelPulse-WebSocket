@@ -73,6 +73,19 @@ app.locals.broadcastCommentary = broadcastCommentary;
 app.use(errorHandler);
 
 
+// ERROR HANDLING FOR SERVER
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`Port ${PORT} is already in use. Waiting before retry...`);
+    setTimeout(() => {
+      server.close();
+      server.listen(PORT, HOST);
+    }, 1000);
+  } else {
+    console.error("Server error:", err);
+  }
+});
+
 server.listen(PORT, HOST, () => {
   const baseUrl =
     HOST === '0.0.0.0'
@@ -81,4 +94,21 @@ server.listen(PORT, HOST, () => {
 
   console.log(`Server is running on ${baseUrl}`);
   console.log(`WebSocket Server is running on ${baseUrl.replace('http', 'ws')}/ws`);
+});
+
+// GRACEFUL SHUTDOWN
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received: closing HTTP server");
+  server.close(() => {
+    console.log("HTTP server closed");
+    process.exit(0);
+  });
+});
+
+process.on("SIGINT", () => {
+  console.log("SIGINT signal received: closing HTTP server");
+  server.close(() => {
+    console.log("HTTP server closed");
+    process.exit(0);
+  });
 });
