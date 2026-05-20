@@ -1,42 +1,52 @@
 import { useMatches } from "../hooks/useMatches";
 
+import MatchCard from "../components/match/MatchCard";
+
 function HomePage() {
-  const { data, isLoading, error } = useMatches();
+  const { data, isLoading, error } = useMatches(50);
 
   if (isLoading) {
-    return <h1 className="text-2xl">Loading matches...</h1>;
+    return (
+      <div className="text-white text-2xl">
+        Loading matches...
+      </div>
+    );
   }
 
   if (error) {
-    return <h1 className="text-2xl text-red-500">Failed to load matches</h1>;
+    return (
+      <div className="text-red-500 text-2xl">
+        Failed to load matches
+      </div>
+    );
   }
 
   return (
     <div>
-      <h1 className="text-4xl font-bold mb-8">
-        Live Matches
-      </h1>
+      <div className="flex items-center justify-between mb-10">
+        <h1 className="text-5xl font-bold">
+          KhelPulse
+        </h1>
 
-      <div className="space-y-4">
-        {data?.data?.map((match) => (
-          <div
-            key={match.id}
-            className="p-4 rounded-lg bg-gray-900 border border-gray-800"
-          >
-            <h2 className="text-2xl font-semibold">
-              {match.homeTeam} vs {match.awayTeam}
-            </h2>
-
-            <p className="text-gray-400">
-              {match.sport}
-            </p>
-
-            <p className="text-green-400 mt-2">
-              {match.status}
-            </p>
-          </div>
-        ))}
+        <p className="text-gray-400">
+          Real-Time Sports Updates
+        </p>
       </div>
+
+      {data?.data?.length === 0 ? (
+        <div className="text-gray-400">
+          No matches found
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {data?.data?.map((match) => (
+            <MatchCard
+              key={match.id}
+              match={match}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
